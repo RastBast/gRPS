@@ -1,3 +1,4 @@
 gRPS
 *.exe
 .env
+.DS_Store
