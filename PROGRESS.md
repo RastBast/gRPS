@@ -22,7 +22,7 @@
 
 ## В работе
 
-- Чистка репозитория: один место генерации `gen/`, сгенерированное вне git, дубль `orders/` в корне удалён, пуш проверен ls-remote.
+- Чиним генерацию. Проверено 2026-09-14: локальный `buf.gen.yaml` всё ещё `out: proto` без managed mode (в git тот же), в `order.proto` руками вписан `option go_package` на `proto/...` — противоречит целевой схеме `gen/`. Папка `gen/` на машине — труп старого конфига. План: `out: gen` ×2 + managed + go_package_prefix `github.com/RastBast/gRPS/gen` + `clean: true`, удалить option из .proto, `*.pb.go` в .gitignore, перегенерить, мусор из git убрать, пуш проверить ls-remote.
 
 ## Квизы (результаты)
 
