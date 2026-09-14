@@ -4,7 +4,6 @@ package orders.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/RastBast/gRPS/proto/orders/v1;ordersv1";
 message Order {
   int64 id = 1;
   string customer_name = 2;

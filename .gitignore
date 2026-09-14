@@ -2,3 +2,4 @@ gRPS
 *.exe
 .env
 .DS_Store
+*.pb.go
