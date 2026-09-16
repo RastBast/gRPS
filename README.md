@@ -5,7 +5,7 @@
 
 ## Эталон (только как ЧЕК-ЛИСТ тем, не копируем)
 
-- Основной: [ThreeDotsLabs/wild-workouts-go-ddd-example](https://github.com/ThreeDotsLabs/wild-workouts-go-ddd-example) — MIT, ~6.5k★, обновлялся 2026-08. 100 Go-файлов, один `go.work` на 5 модулей.
+- Основной: [ThreeDotsLabs/wild-workouts-go-ddd-example](https://github.com/ThreeDotsLabs/wild-workouts-go-ddd-example) — MIT, ~6.5k★, обновлялся 2026-08. 100 Go-файлов, один `go.work` на 6 модулей (root, common, trainer, trainings, users, tools/c4).
   В его README прямо написано: «No application is perfect from the beginning… This process is in progress» — это учебник по рефакторингу, эталонного продакшена там нет.
 - **Берём:** слои `domain / app / ports / adapters`, DDD-lite, CQRS (command/query), типизацию ошибок на границе транспорта, тестовую пирамиду, `Taskfile`, `docker-compose`, CI.
 - **НЕ берём:** Firestore + Firebase + Cloud Run + Terraform-GCP (у нас Postgres/Redis/Kafka/K8s), `logrus` (у них 28 файлов, `log/slog` — 0), `github.com/pkg/errors` (19 мест, `%w` — 0). Оба пакета — эра 2019, на собесе 2027 это минус.
