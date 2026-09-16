@@ -20,12 +20,32 @@ const (
 	StatusCanceled   Status = "canceled"
 )
 
+type LogReporter struct{}
+
+type CounterReporter struct {
+	Count int64
+}
+
+type Reporter interface { // чем меньше инрфейс чем он более хороший
+	Report(o Order)
+}
+
 type Order struct { // струтора заказа
 	ID           int64
 	CustomerName string
 	Total        int64
 	CreatedAt    time.Time
 	Status       Status
+}
+
+func (c *CounterReporter) Report(o Order) {
+	c.Count++
+	log.Println(c.Count, "Номер")
+}
+
+func (l LogReporter) Report(o Order) {
+
+	log.Println(o, "Интерфейс")
 }
 
 func main() {
@@ -41,11 +61,11 @@ func main() {
 		cancel()
 	}()
 
-	orders := make(chan Order, 5) // создаем очередь горутин (буфер 5)
+	orders := make(chan Order, 5) // создаем очередь ордеров (буфер 5)
 
 	var wg sync.WaitGroup // Создаем счечик го рутин
 
-	wg.Add(2) // добовляем 2 рутины в очередь (фикс: было 3, а горутин 2)
+	wg.Add(2) // добовляем 2 рутины в очередь
 
 	// *producer*
 	go func() { // создаем го рутину что бы получать ордера
@@ -69,6 +89,11 @@ func main() {
 		}
 	}()
 
+	counter := &CounterReporter{}
+	var rep Reporter = counter
+
+	ypo := LogReporter{}
+	var i Reporter = ypo
 	go func() { // это потребилеь он получает оредра через канал а потом их читает
 		defer wg.Done()
 		for {
@@ -80,7 +105,8 @@ func main() {
 				}
 				o.Status = StatusCompleted         // меняем стаусу заказа
 				time.Sleep(100 * time.Millisecond) // Печатам после 100 мс
-				log.Println(o)
+				i.Report(o)
+				rep.Report(o)
 			case <-ctx.Done():
 				log.Println("Потребитель прекратил обработку из-за завершения работы")
 				return
@@ -90,5 +116,6 @@ func main() {
 		}
 	}()
 	wg.Wait() // Ждет пока 2 го рутины закчант работу продюсер и потребитель
+
 	log.Println("корректное завершение работы выполнено")
 }
