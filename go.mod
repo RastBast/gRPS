@@ -1,4 +1,4 @@
-module github.com/RastBast/gRPS
+module github.com/RastBast/GRPS
 
 go 1.27.1
 
