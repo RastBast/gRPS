@@ -2,7 +2,7 @@
 
 ## In work (в работе)
 
-- [ ] `gRPC-01`: buf generate + read gen/ + fix module-path case (started 2026-09-20; 2026-09-21: 4/5 artifacts explained, Register + Q3/Q4 + fixes + build proof pending; memory files committed to arena/01a0c09e-grps)
+- [ ] `gRPC-01`: buf generate + read gen/ + fix module-path case (started 2026-09-20; 2026-09-21: 4/5 artifacts explained, memory files pushed to arena/01a0c09e-grps; eve: Register accepted, quiz refused, holding for M/E + build proof; Q3/Q4 deferred into gRPC-02 — answer by code)
 
 ## Closed topics (закрытые темы)
 
