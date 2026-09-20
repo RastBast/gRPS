@@ -2,7 +2,8 @@
 
 ## In work (в работе)
 
-- [ ] `gRPC-01`: buf generate + read gen/ + fix module-path case (started 2026-09-20; 2026-09-21: 4/5 artifacts explained, memory files pushed to arena/01a0c09e-grps; eve: Register accepted, quiz refused, holding for M/E + build proof; Q3/Q4 deferred into gRPC-02 — answer by code)
+- [ ] `gRPC-01`: buf generate + read gen/ + fix module-path case (debt accepted, see Debt ledger; closes when ledger paid)
+- [ ] `gRPC-02`: OrderService server + Go client + first live call (started 2026-09-21, M9 E9, variant B default)
 
 ## Closed topics (закрытые темы)
 
@@ -32,6 +33,7 @@ Go basics → gRPC → Postgres → Docker → tests/logs → CI/CD → Redis �
 ## M/E log (one line per day)
 
 - 2026-09-20: M9 E9 (chat start, motivation window open — pushing gRPC)
+- 2026-09-21: M9 E9, обстановка 6 (unlock line; quiz→debt deal; pushing gRPC-02 server+client)
 
 ## Mock interviews (пробный собес, monthly)
 
