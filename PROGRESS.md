@@ -13,6 +13,14 @@
 
 - `status` string → enum; `total` validation; CreateOrder idempotency; gRPC graceful shutdown; pin protoc-gen-go/protoc-gen-go-grpc versions.
 
+## Debt ledger (принято 2026-09-21, due в gRPC-02)
+
+- Q1 plugin mapping + Q2-2nd-half retell — due with first server run
+- Q3 — closes with first live client→server call
+- Q4 — closes at first forgotten buf generate
+- find gen + build+exit + diff stat — due at first red build in gRPC-02 (paste raw)
+- md-fetch (variant A) — due end of week
+
 ## Roadmap (порядок тем)
 
 Go basics → gRPC → Postgres → Docker → tests/logs → CI/CD → Redis → Kafka → k8s → observability → system design (from October) + algos (1–2/week → 1–2/day) + behavioral interviews.
