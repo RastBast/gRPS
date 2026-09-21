@@ -5,6 +5,7 @@ Rule: only the student writes Go/.proto/Docker. Exception — only on explicit r
 | Date       | What | Made by | Must rewrite | Status                                             |
 |------------|------|---------|--------------|----------------------------------------------------|
 | 2026-09-20 | —    | —       | —            | no debt (student's words; writes Go/proto himself) |
+| 2026-09-21 | Echo server+client snippets (chat, ~25 lines) | mentor | adapt to OrderService himself + explain every line at review | OPEN |
 
 Note: README/PROGRESS/TECH_DEBT/MISTAKES created by mentor on 2026-09-20 — docs/configs (allowed), NOT debt, no rewrite needed.
 
