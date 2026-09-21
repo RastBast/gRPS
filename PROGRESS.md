@@ -33,7 +33,7 @@ Go basics → gRPC → Postgres → Docker → tests/logs → CI/CD → Redis �
 ## M/E log (one line per day)
 
 - 2026-09-20: M9 E9 (chat start, motivation window open — pushing gRPC)
-- 2026-09-21: M9 E9, обстановка 6→9 (mindmap: mustEmbed found, client/server interfaces merged — corrected; gRPC-02 coding)
+- 2026-09-21: M9 E9, обстановка 9 (mindmap corrected; server.go attempt 2: 2.5/5 fixes; feedback: fewer terms, fingers-first)
 
 ## Mock interviews (пробный собес, monthly)
 
