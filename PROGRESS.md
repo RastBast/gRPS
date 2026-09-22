@@ -33,7 +33,7 @@ Go basics → gRPC → Postgres → Docker → tests/logs → CI/CD → Redis �
 ## M/E log (one line per day)
 
 - 2026-09-20: M9 E9 (chat start, motivation window open — pushing gRPC)
-- 2026-09-21: M9 E9→M10 E10, обстановка 9 (server.go attempt 3 sideways; re-arch proposed: infrastructure/{db,transport}; health.proto pasted; awaiting arch choice; fingers-first)
+- 2026-09-21: M10 E10, обстановка 9 (arch choice A: green in current folders; re-arch parked; M/E report-on-change per student; proto cleanup pending: drop GetStatus/PingRequest/health.proto)
 
 ## Mock interviews (пробный собес, monthly)
 
