@@ -3,7 +3,7 @@
 ## In work (в работе)
 
 - [ ] `gRPC-01`: buf generate + read gen/ + fix module-path case (debt accepted, see Debt ledger; closes when ledger paid)
-- [ ] `gRPC-02`: OrderService server + Go client + first live call (started 2026-09-21, M9 E9, variant B default)
+- [ ] `gRPC-02`: OrderService server + Go client + first live call (started 2026-09-21; health: library, not hand proto — guide given; proto cleanup pending)
 
 ## Closed topics (закрытые темы)
 
