@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -10,81 +9,97 @@ import (
 	"syscall"
 	"time"
 
-	order "github.com/RastBast/GRPS/internal/order/domain"
+	pb "github.com/RastBast/grpc/gen/orders/v1"
+	order "github.com/RastBast/grpc/internal/order/domain"
+	server "github.com/RastBast/grpc/internal/presentation/grpc"
 )
 
+// 1. НАШ gRPC СЕРВИС
+// Это наш "Официант". Ему нужен доступ к каналу, чтобы передавать заказы на кухню.
 type OrderGRPCServer struct {
-	// pb.UnimplementedOrderServiceServer
+	pb.UnimplementedOrderServiceServer
+	ordersChan chan<- order.Order // Канал для отправки заказов повару
+}
+
+// 2. МЕТОД ПРИЕМА ЗАКАЗА ПО СЕТИ
+// Когда кто-то вызывает метод CreateOrder через интернет, срабатывает эта функция
+func (s *OrderGRPCServer) CreateOrder(ctx context.Context, req *pb.CreateOrderRequest) (*pb.CreateOrderResponse, error) {
+	// Создаем заказ в нашем внутреннем формате
+	newOrder := order.Order{
+		ID:           time.Now().UnixMilli(), // Временный ID
+		CustomerName: req.GetCustomerName(),
+		Total:        req.GetTotal(),
+		Status:       order.StatusNew,
+		CreatedAt:    time.Now(),
+	}
+
+	// Кладем заказ на ленту (в канал)
+	s.ordersChan <- newOrder
+	log.Printf("Принят новый заказ по сети от: %s\n", req.GetCustomerName())
+
+	// Отвечаем клиенту (всё ок)
+	return &pb.CreateOrderResponse{
+		//TODO: вернуть рельный заказ
+	}, nil
 }
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// ловим Ctrl+C для graceful shutdown
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigCh
-		log.Println("Галя у нас отмена")
-		cancel()
-	}()
+	// 3. СОЗДАЕМ КАНАЛ (Наша "Лента на кухню")
+	orders := make(chan order.Order, 5)
+	var wg sync.WaitGroup
 
-	orders := make(chan order.Order, 5) // создаем очередь ордеров (буфер 5)
-
-	var wg sync.WaitGroup // Создаем счетчик горутин
-
-	wg.Add(2) // добавляем 2 рутины в очередь
-
-	// *producer*
-	go func() { // создаем горутину чтобы получать ордера
-		defer wg.Done()
-		defer close(orders) // закрываем канал когда producer вышел (и по cancel тоже)
-
-		for i := 0; i < 100; i++ {
-			// ИСПРАВЛЕНО: добавлена открывающая скобка { и префиксы order. у статусов
-			ord := order.Order{
-				ID:           int64(i + 1),
-				CustomerName: fmt.Sprintf("client-%d", i),
-				Total:        1000 * int64(i+1),
-				Status:       order.StatusNew,
-				CreatedAt:    time.Now(),
-			}
-			select {
-			case <-ctx.Done(): // Проверяем, не прервали ли программу
-				log.Println("Продюсер остановлен сигналом отмены")
-				return
-			case orders <- ord: // ИСПРАВЛЕНО: отправляем переменную ord (имя изменено, чтобы не конфликтовать с именем пакета)
-			}
-		}
-	}()
-
+	// 4. ЗАПУСКАЕМ ПОВАРА (Потребитель)
+	wg.Add(1)
 	counter := &order.CounterReporter{}
-	var rep order.Reporter = counter
-
 	ypo := order.LogReporter{}
-	var i order.Reporter = ypo
-	go func() { // это потребитель он получает ордера через канал а потом их читает
+
+	go func() {
 		defer wg.Done()
 		for {
 			select {
-			case o, ok := <-orders: // Перебираем канал чтобы достать новые ордера
+			case o, ok := <-orders: // Берем заказ с ленты
 				if !ok {
-					log.Println("канал закрыт, потребитель завершил работу")
+					log.Println("Лента остановлена, повар уходит домой")
 					return
 				}
-				o.Status = order.StatusCompleted // ИСПРАВЛЕНО: добавлен префикс пакета order.
-				i.Report(o)
-				rep.Report(o)
+				log.Printf("Повар начал готовить заказ %d\n", o.ID)
+
+				// Эмулируем время готовки
+				time.Sleep(500 * time.Millisecond)
+				o.Status = order.StatusCompleted
+				ypo.Report(o)
+				counter.Report(o)
+
 			case <-ctx.Done():
-				log.Println("Потребитель прекратил обработку из-за завершения работы")
+				log.Println("Ресторан закрывается, повар уходит")
 				return
-			case <-time.After(1 * time.Second):
-				log.Println("Время ожидания ордера истекло")
 			}
 		}
 	}()
-	wg.Wait() // Ждет пока 2 горутины закончат работу продюсер и потребитель
 
-	log.Println("корректное завершение работы выполнено")
+	// 5. НАНИМАЕМ ОФИЦИАНТА И ЗАПУСКАЕМ СЕРВЕР
+	myOrderService := &OrderGRPCServer{
+		ordersChan: orders,
+	}
+
+	// Вызываем функцию из твоего server.go
+	grpcServer := server.SetupAndRunGRPCServer(myOrderService)
+
+	// 6. ЖДЕМ СИГНАЛА НА ВЫКЛЮЧЕНИЕ (Ctrl+C)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	<-sigCh // Программа замирает здесь и работает, пока не нажмут Ctrl+C
+
+	log.Println("Галя, у нас отмена! Закрываем ресторан...")
+
+	cancel()                  // 1. Говорим всем горутинам, что пора закругляться
+	grpcServer.GracefulStop() // 2. Перестаем принимать новые gRPC запросы (Официант уходит)
+	close(orders)             // 3. Останавливаем ленту (больше заказов не будет)
+	wg.Wait()                 // 4. Ждем, пока повар доготовит последний заказ
+
+	log.Println("Корректное завершение работы выполнено")
 }
