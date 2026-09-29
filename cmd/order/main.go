@@ -2,89 +2,118 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
-	order "github.com/RastBast/GRPS/internal/order/domain"
+	"github.com/joho/godotenv"
+
+	"google.golang.org/grpc"
+
+	"google.golang.org/grpc/reflection"
+
+	pb "github.com/RastBast/grpc/gen/orders/v1"
+	commonPg "github.com/RastBast/grpc/internal/common/postgres"
+	order "github.com/RastBast/grpc/internal/order/domain"
+	orderPg "github.com/RastBast/grpc/internal/order/repository/postgres"
+	grpcServer "github.com/RastBast/grpc/internal/presentation/grpc"
 )
 
-type OrderGRPCServer struct {
-	// pb.UnimplementedOrderServiceServer
-}
-
 func main() {
+
+	if err := godotenv.Load(); err != nil {
+		log.Println("Предупреждение: .env файл не найден, используются системные переменные")
+	}
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("Ошибка: переменная DATABASE_URL не задана в .env")
+	}
+
+	// 1. Создаем главный контекст приложения
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// ловим Ctrl+C для graceful shutdown
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	// 2. Подключаемся к PostgreSQL через пул соединений
+	pool, err := commonPg.NewPool(ctx)
+	if err != nil {
+		log.Fatalf("Не удалось подключиться к БД: %v", err)
+	}
+	defer pool.Close()
+
+	// 3. Инициализируем репозиторий для работы с заказами
+	repo := orderPg.NewOrderRepository(pool)
+
+	// 4. Создаем канал "Лента на кухню"
+	orders := make(chan order.Order, 5)
+	var wg sync.WaitGroup
+
+	// 5. Запускаем воркера (Повара), который сохраняет заказы в Postgres
+	wg.Add(1)
 	go func() {
-		<-sigCh
-		log.Println("Галя у нас отмена")
-		cancel()
-	}()
-
-	orders := make(chan order.Order, 5) // создаем очередь ордеров (буфер 5)
-
-	var wg sync.WaitGroup // Создаем счетчик горутин
-
-	wg.Add(2) // добавляем 2 рутины в очередь
-
-	// *producer*
-	go func() { // создаем горутину чтобы получать ордера
-		defer wg.Done()
-		defer close(orders) // закрываем канал когда producer вышел (и по cancel тоже)
-
-		for i := 0; i < 100; i++ {
-			// ИСПРАВЛЕНО: добавлена открывающая скобка { и префиксы order. у статусов
-			ord := order.Order{
-				ID:           int64(i + 1),
-				CustomerName: fmt.Sprintf("client-%d", i),
-				Total:        1000 * int64(i+1),
-				Status:       order.StatusNew,
-				CreatedAt:    time.Now(),
-			}
-			select {
-			case <-ctx.Done(): // Проверяем, не прервали ли программу
-				log.Println("Продюсер остановлен сигналом отмены")
-				return
-			case orders <- ord: // ИСПРАВЛЕНО: отправляем переменную ord (имя изменено, чтобы не конфликтовать с именем пакета)
-			}
-		}
-	}()
-
-	counter := &order.CounterReporter{}
-	var rep order.Reporter = counter
-
-	ypo := order.LogReporter{}
-	var i order.Reporter = ypo
-	go func() { // это потребитель он получает ордера через канал а потом их читает
 		defer wg.Done()
 		for {
 			select {
-			case o, ok := <-orders: // Перебираем канал чтобы достать новые ордера
+			case o, ok := <-orders:
 				if !ok {
-					log.Println("канал закрыт, потребитель завершил работу")
+					log.Println("Лента остановлена, повар уходит домой")
 					return
 				}
-				o.Status = order.StatusCompleted // ИСПРАВЛЕНО: добавлен префикс пакета order.
-				i.Report(o)
-				rep.Report(o)
+				log.Printf("Повар начал обрабатывать и сохранять заказ %d\n", o.ID)
+
+				// Меняем статус заказа на COMPLETED
+				o.Status = order.StatusCompleted
+
+				// Пишем результат напрямую в PostgreSQL
+				if err := repo.SaveOrder(ctx, o); err != nil {
+					log.Printf("Ошибка сохранения заказа %d в БД: %v\n", o.ID, err)
+					continue
+				}
+
+				log.Printf("Заказ %d успешно обработан и сохранен в Postgres\n", o.ID)
+
 			case <-ctx.Done():
-				log.Println("Потребитель прекратил обработку из-за завершения работы")
+				log.Println("Ресторан закрывается, повар завершает работу")
 				return
-			case <-time.After(1 * time.Second):
-				log.Println("Время ожидания ордера истекло")
 			}
 		}
 	}()
-	wg.Wait() // Ждет пока 2 горутины закончат работу продюсер и потребитель
 
-	log.Println("корректное завершение работы выполнено")
+	// 6. Настраиваем и регистрируем gRPC-сервер
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("Не удалось открыть порт 50051: %v", err)
+	}
+
+	gRPCServer := grpc.NewServer()
+	orderServiceHandler := grpcServer.NewOrderGRPCServer(orders, repo)
+	pb.RegisterOrderServiceServer(gRPCServer, orderServiceHandler)
+
+	reflection.Register(gRPCServer)
+
+	// Запускаем gRPC-сервер в отдельной горутине, чтобы не блокировать main
+	go func() {
+		log.Println("gRPC сервер запущен на порту :50051")
+		if err := gRPCServer.Serve(lis); err != nil && err != grpc.ErrServerStopped {
+			log.Fatalf("Ошибка работы gRPC сервера: %v", err)
+		}
+	}()
+
+	// 7. Ожидаем сигнал остановки (Ctrl+C или SIGTERM от Docker/K8s)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	<-sigCh
+	log.Println("Получен сигнал завершения. Начинаем Graceful Shutdown...")
+
+	// 8. Порядок остановки всех систем:
+	gRPCServer.GracefulStop() // Перестаем принимать новые сетевые запросы
+	cancel()                  // Уведомляем горутины об остановке
+	close(orders)             // Закрываем канал
+	wg.Wait()                 // Ждем завершения фоновой обработки заказа
+
+	log.Println("Сервер успешно и корректно остановлен")
 }
