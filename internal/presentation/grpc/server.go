@@ -46,7 +46,7 @@ func (s *OrderGRPCServer) CreateOrder(ctx context.Context, req *pb.CreateOrderRe
 		Order: &pb.Order{
 			Id:           o.ID,
 			CustomerName: o.CustomerName,
-			Total:           o.Total,
+			Total:        o.Total,
 			Status:       string(o.Status),
 		},
 	}, nil

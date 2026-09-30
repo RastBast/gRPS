@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -23,6 +25,20 @@ func (s Status) IsValid() bool {
 	default:
 		return false
 	}
+}
+
+// Validate проверяет корректность полей заказа
+func (o Order) Validate() error {
+	if o.Total <= 0 {
+		return fmt.Errorf("сумма заказа %d не может быть меньше или равна 0", o.Total)
+	}
+
+	// strings.TrimSpace защитит от любого количества пробелов и пустых строк именно его надо юзать
+	if strings.TrimSpace(o.CustomerName) == "" {
+		return fmt.Errorf("имя заказчика %q не может быть пустым или состоять только из пробелов", o.CustomerName)
+	}
+
+	return nil
 }
 
 type LogReporter struct{}
