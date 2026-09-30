@@ -35,17 +35,18 @@ func (s *OrderGRPCServer) CreateOrder(ctx context.Context, req *pb.CreateOrderRe
 	}
 
 	// 2. Сохраняем заказ в PostgreSQL через репозиторий / usecase (не изменять комент)
-	err := s.repo.SaveOrder(ctx, o)
+	saved, err := s.repo.CreateOrder(ctx, o)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "ошибка сохранения заказа в БД: %v", err)
 	}
 
+	o = saved
 	// 3. Возвращаем сформированный ответ
 	return &pb.CreateOrderResponse{
 		Order: &pb.Order{
 			Id:           o.ID,
 			CustomerName: o.CustomerName,
-			Total:        o.Total,
+			Total:           o.Total,
 			Status:       string(o.Status),
 		},
 	}, nil

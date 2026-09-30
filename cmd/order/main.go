@@ -68,7 +68,9 @@ func main() {
 				o.Status = order.StatusCompleted
 
 				// Пишем результат напрямую в PostgreSQL
-				if err := repo.SaveOrder(ctx, o); err != nil {
+				if stay, err := repo.CreateOrder(ctx, o); err != nil {
+
+					o = stay
 					log.Printf("Ошибка сохранения заказа %d в БД: %v\n", o.ID, err)
 					continue
 				}

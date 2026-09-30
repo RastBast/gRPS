@@ -9,11 +9,21 @@ import (
 type Status string
 
 const (
+	StatusCreated    Status = "created"
 	StatusNew        Status = "new"
 	StatusProcessing Status = "processing"
 	StatusCompleted  Status = "completed"
 	StatusCanceled   Status = "canceled"
 )
+
+func (s Status) IsValid() bool {
+	switch s {
+	case StatusCreated, StatusNew, StatusProcessing, StatusCompleted, StatusCanceled:
+		return true
+	default:
+		return false
+	}
+}
 
 type LogReporter struct{}
 
